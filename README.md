@@ -1,21 +1,13 @@
-[![Build Status](https://buildhive.cloudbees.com/job/RestExpress/job/RestExpress/badge/icon)](https://buildhive.cloudbees.com/job/RestExpress/job/RestExpress/)
-
 RestExpress is a thin wrapper on the JBOSS Netty HTTP stack to provide a simple and easy way to
 create RESTful services in Java that support massive Internet Scale and performance.
 
 Born to be simple, only three things are required to wire up a service:
-1) The main class which utilizes the RestExpress DSL to create a server instance.
-2) A RouteDeclaration extender (much like routes.rb in a Rails app), which uses a DSL for the
-   declaration of supported URLs and HTTP methods of the service(s) in its defineRoutes() method.
-3) Service implementation(s), which is/are a simple POJO--no interface or super class
-   implementation.
 
-See: examples/kickstart directory to get started (there is a README there).
+1. The main class which utilizes the RestExpress DSL to create a server instance.
+2. Use a DSL for the declaration of supported URLs and HTTP methods of the service(s) (much like routes.rb in a Rails app).
+3. Service controller implementation(s), which is/are a simple POJO--no interface or super class implementation.
 
-RestExpress supports both JSEND-style and raw responses.  Meaning that it can wrap responses so
-AJAX clients can always process the responses easily.  Or it can simply marshal the service return
-value directly into JSON or XML.  For more information on JSEND-style responses, see:
-http://labs.omniti.com/labs/jsend
+See: https://github.com/RestExpress/RestExpress-Archetype to get started (there is a README there).
 
 Maven Usage
 ===========
@@ -24,7 +16,7 @@ Stable:
 		<dependency>
 			<groupId>com.strategicgains</groupId>
 			<artifactId>RestExpress</artifactId>
-			<version>0.9.2</version>
+			<version>0.11.3</version>
 		</dependency>
 ```
 Development:
@@ -32,12 +24,13 @@ Development:
 		<dependency>
 			<groupId>com.strategicgains</groupId>
 			<artifactId>RestExpress</artifactId>
-			<version>0.9.3-SNAPSHOT</version>
+			<version>0.12.0-SNAPSHOT</version>
 		</dependency>
 ```
 Or download the jar directly from: http://search.maven.org/#search%7Cga%7C1%7Ca%3A%22RestExpress%22
 
-Note that to use the SNAPSHOT version, you must enable snapshots and a repository in your pom file as follows:
+Note that to use the SNAPSHOT version, you must enable snapshots and a repository in your pom file as follows
+(if you already have a profile with repositories in your pom, you can just copy the <repository> section):
 ```xml
   <profiles>
     <profile>
@@ -45,7 +38,7 @@ Note that to use the SNAPSHOT version, you must enable snapshots and a repositor
           <activation><activeByDefault>true</activeByDefault></activation>
        <repositories>
          <repository>
-           <id>snapshots-repo</id>
+           <id>sonatype-snapshots-repo</id>
            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
            <releases><enabled>false</enabled></releases>
            <snapshots><enabled>true</enabled></snapshots>
@@ -55,10 +48,10 @@ Note that to use the SNAPSHOT version, you must enable snapshots and a repositor
   </profiles>
 ```
 
-===================================================================================================
-## A quick tutorial:
+A quick tutorial:
+=================
 
-Please see the Kickstart application in examples/kickstart for a complete, running example.
+Please see the Maven Archetypes at https://github.com/RestExpress/RestExpress-Archetype for kick-starting your API.
 
 * HTTP Methods, if not changed in the fluent (DSL) interface, map to the following:
 	* GET --> read(Request, Response)
@@ -68,16 +61,192 @@ Please see the Kickstart application in examples/kickstart for a complete, runni
 
 * You can choose to return objects from the methods, if desired, which will be returned to the client in the body of the response.  The object will be marshaled into JSON or XML, depending on the default or based on the format in the request (e.g. '.xml' or '?format=xml').
 
-* If you choose to not return a value from the method (void methods) and using raw responses, then call response.setResponseNoContent() before returning to set the response HTTP status code to 204 (no content).  Wrapped responses (JSEND style) are the default.  So if you're using wrapped responses, there will always be a response returned to the client--therefore, you don't need to set the response.setResponseNoContent().  Just return your objects--or not.  RestExpress will handle things on your behalf!
+* If you choose to not return a value from the method (void methods) and using raw responses, then call response.setResponseNoContent() before returning to set the response HTTP status code to 204 (no content).
 
 * On successful creation, call response.setResponseCreated() to set the returning HTTP status code to 201.
 
-* For more real-world examples, see the examples/ directory which contains additional projects that setup RestExpress services.  Simply do '**ant run**' to run them.  Then to see what's available perform a GET on the route: '/routes/metadata' to get a list of all the routes (or endpoints) available (e.g. localhost:8000/routes/metadata in the browser).
+* For more real-world examples, see the https://github.com/RestExpress/RestExpress-Examples repo which contains additional projects that setup RestExpress services.  Simply do '**mvn exec:java**' to run them.  Then to see what's available perform a GET on the route: '/routes/metadata' to get a list of all the routes (or endpoints) available (e.g. localhost:8081/routes/metadata in the browser).
 
-===================================================================================================
 Change History/Release Notes:
+=============================
+
+Release 0.12.0-SNAPSHOT (in master)
+-----------------------------------
+* **BREAKING CHANGE** Added Request.getScheme() which makes a guess re. http/https from host. Altered Request.getUrl() to use it instead of getProtocol().
+* **BREAKING CHANGE** Removed XML support. No more XStream!
+* **BREAKING CHANGE** Issue#140 - Use io.netty.handler.ssl.SslContext instead of java.net.ssl.SSLContext. Using SslUtil still works. Otherwise, use SslContextBuilder.
+* **BREAKING CHANGE** Issue#135 - Query-string parameter keys and values are URL decoded before putting them into the header and query-string maps.
+* **BREAKING CHANGE** Changed getBaseUrl() to consider X-Forwarded-Host, Forwarded and HOST headers to enable constructing baseURL behind load balancers and proxies.
+* Issue #126 - Introduced RestExpress.noCompression() to turn off response GZip and deflate encoding support (the Netty HttpContentCompressor is not put in the pipeline) for speed optimization (e.g. for small payloads).
+* Issue #130 - Throw on BindException (where the server IP address/port are already in use).
+* Issues #137-138 - Use char[] vs String in SslUtil (Merge request from albahrani).
+* Issue #131 - RestExpress.setReadTimeoutSeconds(int seconds) or setReadTimeout(long, TimeUnit) now causes RestExpress to inject a ReadTimeoutHandler into the pipeline.
+* Issues #145, 22 - Support for large, multi-part file uploads via POST. Off by default. Call restExpressInstance.supportFileUploads(true) to enable.
+* Upgraded Jackson Databind to 2.12.1
+* Upgraded Netty to 4.1.112.Final
+* Upgraded Xstream to 1.4.11.1
+* Upgraded OWASP encoder to 1.2.3
+* Updated to compile with JDK 11 (use Base64 instead of DatatypeConverter in HttpBasicAuthenticationPreprocessor).
+* Added Environment.loadFromEnvVars(Properties) which loads System.getenv() to override the properties file settings. Values are available in fillValues(Properties).
+* Added JSON serialization and deserialization support for LocalDate as properties.
+* Added Request.getXForwardedHost() and getForwarded() as well as a Forwarded class to enable parsing the parameters in the Forwarded header.
+
+Release 0.11.3 - 10 Feb 2016
+----------------------------
+* Changed signature of RestExpress.serializationProvider(SerializationProvider) to return the RestExpress server instance to facilitate method chaining.
+* Issue #38 - Produce error on no routes defined for server. Now throws NoRoutesDefinedException on bind() if no routes are defined.
+* Issue #122 - Listen on prescribed local IP address.
+* Issue #123 - Routes Exception when using PATCH method.
+* Issue #125 - Changed DefaultExceptionMapper to map cause for RuntimeException (not sub-classes) so all exceptions get mapped correctly from the mapping settings. Left a version, LegacyExceptionMapper, for old behavior. If you want legacy behavior, simply call server.setExceptionMapping(new LegacyExceptionMapper());
+* Upgraded to jackson-databind 2.6.0 (from 2.4.2).
+* Minor fixes due to FindBugs report. There were 11 easily fixable issues reported by FindBugs: primarily equals(), hashCode() and compareTo() implementations.
+* Added UnprocessableEntityException (for 422 status code).
+* Upgraded to: Netty 4.0.34.Final, XStream 1.4.8, OWasp Encoder 1.2, Jackson Databind 2.7.1-1, HTTP Client (test) 4.5.1
+
+Release 0.11.2 - 26 Jul 2015
+----------------------------
+* Reduced Java source and target to 1.7
+
+Release 0.11.1 - 24 Jul 2015
+----------------------------
+* Fixed issue #110 - too many files open error.
+* Fixed issue #108 - request.getRemoteAddress() always returns null.
+* Fixed issue #94 - Load configuration properties from classpath (if available) and override with those loaded from file system.
+* Fixed issue #106 - Deprecated RestExpress.setSerializationProvider() and RestExpress.getSerializationProvider() in favor of RestExpress.setDefaultSerializationProvider() and RestExpress.getDefaultSerializationProvider(). Also added new instance methods
+serializationProvider() to set and get the instance's serialization provider.
+* Fixed issue #89 - Made RouteBuilder.determineActionMethod() protected so subclasses can override.
+* Enhanced to use EPoll if it's available on the underlying OS.
+* Added support for ':in:' operator on query-string in filter operations (e.g. ?filter=name:in:a,b,c).
+* Introduced RestExpress.shutdown(boolean) to enable tests to optionally wait for a complete shutdown.
+* Fix for returning 416 when offset is requested for an empty resultset (from Chamal Nanayakkara).
+* Updated Java destination to 1.8
+
+Release 0.11.0 - 12 Mar 2015
+----------------------------
+* **Bug Fix** Strip the response body from HEAD requests to conform to [RFC 2616](http://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.4)(HTTP spec). (from Codey Whitt)
+* Upgraded Netty version from 3.9.5.Final to 4.0.25.Final (from Thomas Colwell and Mathew Leigh).
+* Enhanced QueryRange.asContentRange() and Response.setCollectionResponse() to support output of '*' as max items in range header for count < 0.
+* Added Unit Tests to test RestExpress' ability to compress responses and decompress requests.
+* Added Environment.load(String[], Class) to eliminate the need for Main.loadEnvironments() in all archetype projects.
+* KNOWN ISSUE - Controllers cannot return ReferenceCounted objects that also exist in the Request object.  This will cause the transaction to fail with an IllegalReferenceCountException.  If a ReferenceCounted object needs to be returned, a separate copy of the object will need to be made (some classes, such as ByteBuf, have a .copy() method to facilitate this).
+
+Release 0.10.6-SNAPSHOT - in '0.10.6' branch
+--------------------------------------------
+* **Bug Fix** Strip the response body from HEAD requests to conform to [RFC 2616](http://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.4)(HTTP spec). (from Codey Whitt)
+
+Release 0.10.5 - 2 Dec 2014
+---------------------------
+* Changed FilterComponent.setValue(String) signature to setValue(Object).
+* Added suite of operators (:<:, :<=:, :>:, :>=:, :=:, :!=:, :*: [as starts-with]) to filter operations.
+* Added UnsupportedMediaTypeException which returns 415 HTTP status code.
+* Added ContentType.SIREN
+* Added RoutePlugin.flags() and .parameters() to retrieve flags and parameters, respectively.
+* Altered httpRequest.xxxHeader() calls to use httpRequest.headers().xxx() to eliminate deprecation warnings.
+* Upgraded to Netty 3.9.5 final.
+
+Release 0.10.4 - 5 Sep 2014
+---------------------------
+* Upgraded Jackson Databind to version 2.4.1 to fix an issue with incorrect serialization for objects that have embedded objects.
+* Added XSS prevention outbound encoding to GsonJsonProcessor adding GsonEncodingStringSerializer.
+* Added parseFrom(Request, String[]) method to QueryFilters and QueryOrders.
+* Added tests to verify output media type.
+* Added tests for wrapping of exceptions in processing and preprocessors.
+* Fixed bug in AbstractSerializationProvider.resolveRequest() to use best matched Media Type, if available (vs. just the Content-Type header).
+* Introduced _ignore_http_status query-string parameter to force call to return 200 status (even on failure).
+* Introduced Request.getMediaType() and Request.getSerializationSettings(), as well as, Response.getMediaType().
+* Added new constructor for JacksonJsonProcessor and GsonJsonProcessor to be able to turn off default outbound HTML-encoding behavior.
+* Refactored DefaultRequestHandler.messageReceived() method into two to allow for better instrumentation via java agents like AppDynamics (from Codey Whitt).
+* Upgraded Jackson Databind to 2.4.2
+* Upgraded XStream to 1.4.7
+* Upgraded Netty to 3.9.4.Final
+* Upgraded GSON dependency to 2.3
+
+Release 0.10.3 - 27 May 2014
+----------------------------
+* Change URL Pattern matcher to allow URLs with '?' at the end, but no query-string parameters following it.
+* Changed compiler output version to 1.7 (from 1.6).
+* Added SSL support (from Clark Hobbie).
+* Fixed error message in QueryRange.setLimit(int) from 'limit must be >= 0' to 'limit must be > 0' (from GCL).
+* Changed Request.getQueryStringMap() to never return null (from Kevin Williams).
+* Expose the creation of the DefaultRequestHandler (via RestExpress.buildRequestHandler()) to rest engines not using "main()" or "bind()" (from Ryan Dietrich).
+* Fixed issue with QueryOrders.enforceAllowedProperties() threw erroneous exceptions.
+* Added JacksonEncodingStringSerializer (including it in JacksonJsonProcessor) to outbound HTML Entity encode for possible XSS attacks.
+* Updated to Jackson-Databind 2.3.3 (from 2.1.4).
+
+Release 0.10.2 - 3 Apr 2014
+---------------------------
+* Refactored ExceptionMapping into an interface, extracting previous implementation into DefaultExceptionMapper.
+* Added new convenience methods on Request: getBodyAsStream(), getBodyAsBytes(), getBodyAsByteBuffer().
+* Added new method Request.getNamedPath() that returns only the route path pattern instead of the
+  entire URL, which Request.getNamedUrl() does.
+* Request.getProtocol() now returns the protocol from the underlying HttpRequest instance.
+* Fixed issue in QueryOrders where only a single valid order parameters is supported. Caused IndexOutOfBoundsException.
+* Fixed an issue in RestExpress.java where finally processors were assigned as post processors. This could affect some finally processor implementations, such as timers, etc. since they are now run later in the process.
+* Fixed an issue with finally processors, they are now called before the message is returned to the client (after serialization), or in the finally block (if an error occurs, response is in indeterminite state).
+* Introduced another factory method in ErrorResult, allowing elimination of exceptionType in output.
+* Introduced RequestContext, a Map of name/value pairs much like the Log4j mapped diagnostic contexts (MDC), as an instrument for passing augmentation data from different sources to lower levels in the framework.
+* Can now add supported MediaRange(s) dynamically at startup, such as application/hal+json.
+* ** Breaking Change ** Repackaged org.serialization.xml to org.restexpress.serialization.xml
+* Added ContentType.HAL_JSON and ContentType.HAL_XML plus new RestExpressServerTest tests.
+* Introduced RoutePlugin to simplify plugins that create internal routes.
+
+Release 0.10.1 - 24 Jan 2014
 ---------------------------------------------------------------------------------------------------
-Release 0.9.3 - SNAPSHOT (in branch 'master')
+* Fixed NPE issue when RestExpress.setSerializationProvider() is not called.
+* Fixed misspelling in JsonSerializationProcessor.java for SUPPORTED_MEDIA_TYPES.
+* Enhanced QueryFilters and QueryOrders to support enforcement of appropriate filter/order
+  properties—enabling the verification of appropriate orders and filters. Throws
+  BadRequestException on failure.
+* Removed core StringUtils in favor of common StringUtils.
+* Fixed issue where default serialization processor was not used if setSerializationProcessor() was not called.
+* Changed RestExpress server startup message from “Starting <name> Server on port <port>” to “<name> server listening on port <port>”
+
+Release 0.10.0 - 3 Jan 2014
+---------------------------------------------------------------------------------------------------
+* ** Breaking Change ** Repackaged to 'org.restexpress...' from 'com.strategicgains.restexpress...'
+* ** Breaking Change ** Re-added GSON capability from version 0.8.2, making things a little
+  more pluggable with RestExpress.setSerializationProvider(SerializationProvider).
+  DefaultSerializationProvider is the default. GsonSerializationProvider is also available,
+  but requires adding GSON to your pom file.  Must refactor your own custom ResponseProcessor
+  class into a SerializationProvider implementor.
+* ** Breaking Change ** Removed RestExpress.putResponseProcessor(), .supportJson(), .supportXml(),
+  .supportTxt(), .noJson(), .noXml(), noTxt() as this is all implemented in the SerializationProvider.
+* Implemented content-type negotiation using Content-Type header for serialization (e.g.
+  Request.getBodyAs(type)) and Accept header for deserialization. Implementation still
+  favors .{format}, but uses content-type negotiation if format not supplied.
+* Added RestExpress.enforceHttpSpec() and .setEnforceHttpSpec(boolean) to enable setting
+  the HTTP specification enforcement.  Previously, enforcement was always turned on. Now
+  default is OFF. With it off, RestExpress allows you to create non-standard (per the HTTP
+  specification) responses.
+* Removed com.strategicgains.restexpress.common.util.Callback interface since it wasn't being used.
+* Upgraded Netty to 3.9.0 Final
+
+Release 0.9.4.2 - 16 Oct 2013
+----------------------------------------------------------------------------------------------------
+* Added ErrorResultWrapper and ErrorResult to facilitate only wrapping error responses vs.
+  not wrapping or JSEND-style always-wrapped responses.
+
+Release 0.9.4 - 17 Jul 2013
+---------------------------------------------------------------------------------------------------
+* Fixed issue for plugins that are dependent on RouteMetadata. Fixed issue with routes
+  that depend on GET, PUT, POST, DELETE as the default--wasn't generating metadata
+  correctly for that corner case.
+* Fixed issue with RouteBuilder metadata generation where it wouldn't include the defaults if none set on route.
+* Updated javadoc for getFullPattern() and getPattern().
+* Changed Route.getBaseUrl() to perform null check to avoid getting 'null' string in value.
+* Combined RestExpress-Common as a sub-module and moved core RestExpress functionality
+  to the 'core' sub-module.
+
+Release 0.9.3 - 14 Jun 2013
+---------------------------------------------------------------------------------------------------
+* Fixed issue with setter getting called in deserialization instead of Jackson deserializer.
+* Removed LogLevel enumeration due to lack of use.
+* Fixed issue #61 - Large Chunked Request Causes Errors.  Added HttpChunkAggregator to the
+  pipeline.
+* Added RestExpress.setMaxContentSize(int) to allow limiting of total content length of requests
+  even if chunked.  Default max content size is 25K.
+* Added RestExpress.iterateRouteBuilders(Callback<RouteBuilder> callback) to facilitate
+  plugins, etc. augmenting or extracting information from the declared routes.
 
 Release 0.9.2 - 27 Mar 2013
 ---------------------------------------------------------------------------------------------------
@@ -108,7 +277,7 @@ Release 0.9.1 - 4 Mar 2013
 * **BREAKING CHANGE:** Removed LoggingHandler from the Netty pipeline and related setter methods.
 * Added HttpBasicAuthenticationPreprocessor to facilitate HTTP Basic Authentication. Added
   Flags.Auth.PUBLIC_ROUTE, NO_AUTHENTICATION, and NO_AUTHORIZATION to support configuration
-  of HttpBasicAuthenticationPreprocessor (and other authentication/authorization 
+  of HttpBasicAuthenticationPreprocessor (and other authentication/authorization
   related routes).
 
 Release 0.8.2 - 19 Feb 2013
@@ -138,7 +307,7 @@ Release 0.8.0 - 09 Jan 2013
 * Changed to support multiple response types with wrapping or not, etc. Now can support wrapped
   JSON (.wjson) and XML (.wxml) as well as un-wrapped JSON (.json) and XML (.xml) depending on the
   format specifier.
-* Now throws BadRequestException (400) if the specified format (e.f. .json) isn't supported by the 
+* Now throws BadRequestException (400) if the specified format (e.f. .json) isn't supported by the
   service suite.
 * Now throws MethodNotAllowedException (405) if the requested URL matches a route but not for the
   requested HTTP method.  Sets the HTTP Allow header to a comma-delimited list of accepted methods.
@@ -182,10 +351,10 @@ Release 0.7.2 - 14 May 2012
 * Introduced CacheHeaderPostprocessor which support Cache-Control and other caching-related
   response header best-practices by setting Parameters.Cache.MAX_AGE or Flags.Cache.DONT_CACHE on
   a route.
-* Changed to use QueryStringParser over StringUtils for query-string and QueryStringDecoder for 
+* Changed to use QueryStringParser over StringUtils for query-string and QueryStringDecoder for
   body parsing. This mitigates HashDoS attacks, since the query-string is parsed before a request
   is accepted.
-* Deprecated StringUtils in favor of using Netty's QueryStringDecoder or 
+* Deprecated StringUtils in favor of using Netty's QueryStringDecoder or
   RestExpress's QueryStringParser.
 * Refactored so SerializationProcessor.resolve(Request) is only called once at the end of the
   request cycle (performance enhancement).
